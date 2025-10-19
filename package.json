@@ -1,0 +1,61 @@
+{
+  "name": "mcp-remote-server-kubernetes",
+  "version": "1.0.0",
+  "description": "基于 MCP 协议的 Kubernetes 管理服务器，支持通过 HTTP/SSE 协议远程访问",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "watch": "nodemon --exec ts-node src/index.ts",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix"
+  },
+  "keywords": [
+    "mcp",
+    "kubernetes",
+    "k8s",
+    "model-context-protocol",
+    "ai",
+    "remote-server"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "@kubernetes/client-node": "^0.20.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "winston": "^3.11.0",
+    "dotenv": "^16.3.1",
+    "joi": "^17.11.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "rate-limiter-flexible": "^4.0.1",
+    "uuid": "^9.0.1",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.0",
+    "@types/express": "^4.17.20",
+    "@types/cors": "^2.8.15",
+    "@types/jsonwebtoken": "^9.0.4",
+    "@types/bcryptjs": "^2.4.5",
+    "@types/uuid": "^9.0.6",
+    "@types/js-yaml": "^4.0.8",
+    "@types/jest": "^29.5.6",
+    "typescript": "^5.2.2",
+    "ts-node": "^10.9.1",
+    "nodemon": "^3.0.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "@typescript-eslint/eslint-plugin": "^6.8.0",
+    "@typescript-eslint/parser": "^6.8.0",
+    "eslint": "^8.51.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

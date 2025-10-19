@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  mcp-kubernetes-server:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - AUTH_ENABLED=true
+      - JWT_SECRET=your-production-secret-key
+      - LOG_LEVEL=info
+      - LOG_CONSOLE=true
+      - K8S_IN_CLUSTER=false
+    volumes:
+      - ~/.kube/config:/app/.kube/config:ro
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mcp-network
+
+  # 可选：添加 Redis 用于分布式速率限制
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    command: redis-server --appendonly yes
+
+networks:
+  mcp-network:
+    driver: bridge
+
+volumes:
+  redis_data:

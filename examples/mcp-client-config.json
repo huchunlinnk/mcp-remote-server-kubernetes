@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "kubernetes": {
+      "command": "node",
+      "args": ["dist/index.js"],
+      "env": {
+        "NODE_ENV": "production",
+        "PORT": "3000",
+        "AUTH_ENABLED": "true",
+        "JWT_SECRET": "your-secret-key",
+        "K8S_IN_CLUSTER": "false",
+        "KUBECONFIG": "/path/to/your/kubeconfig",
+        "LOG_LEVEL": "info"
+      }
+    }
+  },
+  "client": {
+    "name": "mcp-kubernetes-client",
+    "version": "1.0.0"
+  },
+  "transport": {
+    "type": "http",
+    "url": "http://localhost:3000/mcp",
+    "headers": {
+      "Authorization": "Bearer YOUR_JWT_TOKEN_HERE"
+    }
+  },
+  "capabilities": {
+    "resources": true,
+    "tools": true,
+    "prompts": true
+  }
+}

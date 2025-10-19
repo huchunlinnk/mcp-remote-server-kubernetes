@@ -1,0 +1,161 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-kubernetes-server
+  namespace: default
+  labels:
+    app: mcp-kubernetes-server
+    version: v1.0.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mcp-kubernetes-server
+  template:
+    metadata:
+      labels:
+        app: mcp-kubernetes-server
+    spec:
+      serviceAccountName: mcp-kubernetes-server
+      containers:
+      - name: mcp-kubernetes-server
+        image: mcp-kubernetes-server:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3000"
+        - name: HOST
+          value: "0.0.0.0"
+        - name: K8S_IN_CLUSTER
+          value: "true"
+        - name: AUTH_ENABLED
+          value: "true"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: mcp-kubernetes-server-secret
+              key: jwt-secret
+        - name: LOG_LEVEL
+          value: "info"
+        - name: LOG_CONSOLE
+          value: "true"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1001
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: logs
+        emptyDir: {}
+      securityContext:
+        fsGroup: 1001
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-kubernetes-server
+  namespace: default
+  labels:
+    app: mcp-kubernetes-server
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: mcp-kubernetes-server
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mcp-kubernetes-server
+  namespace: default
+  labels:
+    app: mcp-kubernetes-server
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mcp-kubernetes-server
+  labels:
+    app: mcp-kubernetes-server
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "namespaces", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "daemonsets", "statefulsets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mcp-kubernetes-server
+  labels:
+    app: mcp-kubernetes-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: mcp-kubernetes-server
+subjects:
+- kind: ServiceAccount
+  name: mcp-kubernetes-server
+  namespace: default
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mcp-kubernetes-server-secret
+  namespace: default
+  labels:
+    app: mcp-kubernetes-server
+type: Opaque
+data:
+  jwt-secret: eW91ci1wcm9kdWN0aW9uLXNlY3JldC1rZXk=  # base64 encoded "your-production-secret-key"
