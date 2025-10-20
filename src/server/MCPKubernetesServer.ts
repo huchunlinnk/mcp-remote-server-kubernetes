@@ -33,11 +33,6 @@ export class MCPKubernetesServer {
     this.authMiddleware = new AuthMiddleware(config.getAuthConfig());
     this.rateLimitMiddleware = new RateLimitMiddleware(this.config.server.rateLimit);
     
-    this.setupMCPServer();
-    this.setupExpressApp();
-  }
-
-  private setupMCPServer(): void {
     this.mcpServer = new Server(
       {
         name: 'mcp-kubernetes-server',
@@ -51,7 +46,11 @@ export class MCPKubernetesServer {
         },
       }
     );
+    this.setupMCPServer();
+    this.setupExpressApp();
+  }
 
+  private setupMCPServer(): void {
     // 注册工具列表处理器
     this.mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
       return {
@@ -166,12 +165,13 @@ export class MCPKubernetesServer {
             throw new Error(`未知的工具: ${name}`);
         }
       } catch (error) {
-        this.logger.error(`工具调用失败: ${name}`, { error: error.message, args });
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        this.logger.error(`工具调用失败: ${name}`, { error: errorMessage, args });
         return {
           content: [
             {
               type: 'text',
-              text: `错误: ${error.message}`,
+              text: `错误: ${errorMessage}`,
             },
           ],
         };
@@ -194,7 +194,7 @@ export class MCPKubernetesServer {
     this.app.use(express.urlencoded({ extended: true }));
 
     // 健康检查
-    this.app.get('/health', (req, res) => {
+    this.app.get('/health', (req: express.Request, res: express.Response) => {
       res.json({ status: 'ok', timestamp: new Date().toISOString() });
     });
 
@@ -203,7 +203,7 @@ export class MCPKubernetesServer {
     this.app.post('/auth/login', this.authMiddleware.createLoginEndpoint());
 
     // MCP 协议端点 - 支持所有 MCP 客户端
-    this.app.post('/mcp', this.authMiddleware.authenticate.bind(this.authMiddleware), async (req, res) => {
+    this.app.post('/mcp', this.authMiddleware.authenticate.bind(this.authMiddleware), async (req: express.Request, res: express.Response) => {
       try {
         const response = await this.processMCPMessage(req.body);
         res.json(response);
@@ -221,7 +221,7 @@ export class MCPKubernetesServer {
     });
 
     // WebSocket 支持 (用于 SSE 和实时通信)
-    this.app.get('/mcp/sse', this.authMiddleware.authenticate.bind(this.authMiddleware), (req, res) => {
+    this.app.get('/mcp/sse', this.authMiddleware.authenticate.bind(this.authMiddleware), (req: express.Request, res: express.Response) => {
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',

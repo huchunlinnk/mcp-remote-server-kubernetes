@@ -20,12 +20,14 @@ export class KubernetesProxy {
   constructor(config: IKubernetesConfig) {
     this.config = config;
     this.logger = Logger.getInstance();
+    this.kc = new k8s.KubeConfig();
     this.initializeKubernetesClient();
+    this.k8sApi = this.kc.makeApiClient(k8s.CoreV1Api);
+    this.k8sAppsApi = this.kc.makeApiClient(k8s.AppsV1Api);
+    this.k8sCustomApi = this.kc.makeApiClient(k8s.CustomObjectsApi);
   }
 
   private initializeKubernetesClient(): void {
-    this.kc = new k8s.KubeConfig();
-    
     try {
       if (this.config.inCluster) {
         // 集群内部认证
@@ -40,10 +42,6 @@ export class KubernetesProxy {
         this.kc.loadFromDefault();
         this.logger.info('使用默认 kubeconfig 连接 Kubernetes');
       }
-
-      this.k8sApi = this.kc.makeApiClient(k8s.CoreV1Api);
-      this.k8sAppsApi = this.kc.makeApiClient(k8s.AppsV1Api);
-      this.k8sCustomApi = this.kc.makeApiClient(k8s.CustomObjectsApi);
       
       this.logger.info('Kubernetes 客户端初始化成功');
     } catch (error) {
@@ -141,7 +139,7 @@ export class KubernetesProxy {
           try {
             await this.k8sApi.readNamespacedPod(name, namespace);
             // 如果存在，则替换
-            const response = await this.k8sApi.replaceNamespacedPod(name, namespace, manifest);
+            const response = await this.k8sApi.replaceNamespacedPod(name, manifest, namespace);
             return response.body;
           } catch {
             // 如果不存在，则创建
@@ -152,7 +150,7 @@ export class KubernetesProxy {
         case 'Service':
           try {
             await this.k8sApi.readNamespacedService(name, namespace);
-            const response = await this.k8sApi.replaceNamespacedService(name, namespace, manifest);
+            const response = await this.k8sApi.replaceNamespacedService(name, manifest, namespace);
             return response.body;
           } catch {
             const response = await this.k8sApi.createNamespacedService(namespace, manifest);
@@ -162,7 +160,7 @@ export class KubernetesProxy {
         case 'Deployment':
           try {
             await this.k8sAppsApi.readNamespacedDeployment(name, namespace);
-            const response = await this.k8sAppsApi.replaceNamespacedDeployment(name, namespace, manifest);
+            const response = await this.k8sAppsApi.replaceNamespacedDeployment(name, manifest, namespace);
             return response.body;
           } catch {
             const response = await this.k8sAppsApi.createNamespacedDeployment(namespace, manifest);
@@ -212,17 +210,8 @@ export class KubernetesProxy {
   public async getLogs(podName: string, namespace?: string, container?: string, lines?: number): Promise<string> {
     try {
       const ns = namespace || this.config.namespace || 'default';
-      const logOptions: any = {};
       
-      if (container) {
-        logOptions.container = container;
-      }
-      
-      if (lines) {
-        logOptions.tailLines = lines;
-      }
-      
-      const response = await this.k8sApi.readNamespacedPodLog(podName, ns, undefined, undefined, undefined, undefined, undefined, undefined, undefined, logOptions.tailLines, undefined, undefined, logOptions.container);
+      const response = await this.k8sApi.readNamespacedPodLog(podName, ns, container, undefined, undefined, undefined, lines);
       return response.body;
     } catch (error) {
       this.logger.error(`获取 Pod 日志失败: ${podName}`, { error, namespace, container });

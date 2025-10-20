@@ -20,7 +20,6 @@ export class RateLimitMiddleware {
     this.logger = Logger.getInstance();
     
     this.rateLimiter = new RateLimiterMemory({
-      keyGenerator: (req: Request) => req.ip || 'unknown',
       points: config.max, // 请求次数限制
       duration: Math.floor(config.windowMs / 1000), // 时间窗口（秒）
     });
